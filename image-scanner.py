@@ -5,6 +5,7 @@ import numpy as np
 
 gi.require_version("Gtk", "3.0")
 from gi.repository import Gtk
+from gi.repository import Gdk
 from gi.repository import GdkPixbuf
 from gi.repository.GdkPixbuf import Pixbuf
 from gi.repository.GdkPixbuf import InterpType
@@ -26,6 +27,17 @@ def cv_to_pixbuf(img):
                                   height,
                                   r_s)
     return pixbuf
+
+def cv_resize(img):
+    w, h,d  = img.shape
+    ratio = 800/w
+    width = int(w * ratio)
+    height = int (h * ratio)
+    dim = (height, width)
+
+    print ("resizing from " , img.shape, " => " , dim)
+    resized = cv2.resize(img, dim , interpolation = cv2.INTER_AREA)
+    return resized
 
 
 def scale_pixbuf(pixbuf_in, ratio): 
@@ -62,7 +74,7 @@ class MyWindow(Gtk.Window):
         top_panel.pack_start(button, False, False, 0)
 
         button = Gtk.Button(label="Cut")
-        button.connect("clicked", self.on_button_clicked)
+        button.connect("clicked", self.on_cut)
         top_panel.pack_start(button, False, False, 0)
 
         button = Gtk.Button(label="CV")
@@ -87,28 +99,98 @@ class MyWindow(Gtk.Window):
         self.drawing_area = Gtk.DrawingArea()
         event_box.add(self.drawing_area)
 
+        event_box.add_events(Gdk.EventMask.POINTER_MOTION_MASK)
+        event_box.add_events(Gdk.EventMask.BUTTON_PRESS_MASK)        
 
-        self.add(main_panel)
+        event_box.connect("button-press-event", self.on_pressed)
+        event_box.connect("motion-notify-event", self.on_tracking)
+        self.tracking = False
+        self.starting_x = 0
+        self.starting_y = 0
+        self.ending_x = 0
+        self.ending_y = 0
+
+
+        self.drawing_area.connect("draw", self.on_draw)
         
+        self.add(main_panel)
+
+    def on_pressed(self, widget, event):
+        self.tracking = not self.tracking        
+        if self.tracking:
+            self.starting_x = event.x
+            self.starting_y = event.y
+            self.ending_x = event.x
+            self.ending_y = event.y
+
+        print (event.x, event.y)
+        self.drawing_area.queue_draw()
+
+
+    def on_tracking(self, widget, event):
+        if self.tracking:
+            self.ending_x = event.x
+            self.ending_y = event.y
+            self.drawing_area.queue_draw()
+
+    def on_draw(self, widget, context):
+        context.set_source_rgba(0.0, 0.7, 0.0, 0.2)
+        context.set_line_width(10)
+        context.move_to(self.starting_x, self.starting_y)
+        context.line_to(self.ending_x, self.ending_y)
+        context.stroke()
+
+    def on_cut(self, widget):
+        src_x = int(min(self.starting_x, self.ending_x))
+        src_y = int(min(self.starting_y, self.ending_y))
+
+        width = int(abs (self.ending_x - self.starting_x))
+        height = int(abs(self.ending_y - self.starting_y))
+
+        self.pixbuf_copy = Pixbuf.new_subpixbuf(self.pixbuf_copy,
+                                                        src_x, src_y,
+                                                        width, height)
+
+        self.img = self.img[src_y:src_y+height,
+                            src_x:src_x+width]
+        
+        
+        
+        self.starting_x = 0
+        self.starting_y = 0
+        self.ending_x = 0
+        self.ending_y = 0
+        self.tracking = False
+        self.update_image()
+
 
     def on_button_clicked(self, widget):
         print("Hello World")
+
 
     def on_load(self, widget):
         self.ratio = 5
         # self.pixbuf_source = Pixbuf.new_from_file("IMG_1.JPG")
         
-        self.img = cv2.imread('IMG_1.JPG',1)
+        self.img_src = cv2.imread('IMG_1.JPG',1)
+        self.img_src = cv_resize(self.img_src)
+        self.img  = self.img_src.copy()
+        
         self.pixbuf_source = cv_to_pixbuf(self.img)
-        self.pixbuf_scaled = scale_pixbuf(self.pixbuf_source, self.ratio)
+        # self.pixbuf_scaled = scale_pixbuf(self.pixbuf_source, self.ratio)
 
-        image = Gtk.Image.new_from_pixbuf(self.pixbuf_scaled)
+        image = Gtk.Image.new_from_pixbuf(self.pixbuf_source)
 
         if self.frame_left.get_child() is not None:
             self.frame_left.remove(self.frame_left.get_child())
         self.frame_left.add(image)
 
         self.content_panel.show_all()
+
+    def on_copy(self, widget):
+        self.img  = self.img_src.copy()        
+        self.pixbuf_copy = self.pixbuf_source.copy()
+        self.update_image()
 
 
     def update_image(self):
@@ -118,12 +200,7 @@ class MyWindow(Gtk.Window):
             self.overlay.remove(self.overlay.get_child())
         self.overlay.add(image)
 
-        self.content_panel.show_all()                
-
-
-    def on_copy(self, widget):
-        self.pixbuf_copy = self.pixbuf_scaled.copy()
-        self.update_image()
+        self.content_panel.show_all()
 
 
     def on_rotate(self, widget):
@@ -155,9 +232,7 @@ class MyWindow(Gtk.Window):
 
         self.img = result
         
-        self.pixbuf_source = cv_to_pixbuf(self.img)
-        self.pixbuf_scaled = scale_pixbuf(self.pixbuf_source, self.ratio)
-        self.pixbuf_copy = self.pixbuf_scaled.copy()        
+        self.pixbuf_copy = cv_to_pixbuf(self.img)
         self.update_image()
 
         
