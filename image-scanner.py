@@ -3,6 +3,8 @@ import gi
 import cv2 as cv2
 import numpy as np
 
+from matplotlib import pyplot as plt
+
 gi.require_version("Gtk", "3.0")
 from gi.repository import Gtk
 from gi.repository import Gdk
@@ -36,7 +38,7 @@ def cv_resize(img):
     dim = (height, width)
 
     print ("resizing from " , img.shape, " => " , dim)
-    resized = cv2.resize(img, dim , interpolation = cv2.INTER_AREA)
+    resized = cv2.resize(img, None, fx=ratio, fy=ratio , interpolation = cv2.INTER_AREA)
     return resized
 
 
@@ -224,13 +226,14 @@ class MyWindow(Gtk.Window):
             bg_img = cv2.medianBlur(dilated_img, 21)
             diff_img = 255 - cv2.absdiff(plane, bg_img)
             norm_img = cv2.normalize(diff_img,None, alpha=0, beta=255, norm_type=cv2.NORM_MINMAX, dtype=cv2.CV_8UC1)
+
             result_planes.append(diff_img)
             result_norm_planes.append(norm_img)
 
         result = cv2.merge(result_planes)
         result_norm = cv2.merge(result_norm_planes)
 
-        self.img = result
+        self.img = result_norm
         
         self.pixbuf_copy = cv_to_pixbuf(self.img)
         self.update_image()
