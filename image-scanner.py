@@ -20,23 +20,22 @@ def cv_to_pixbuf(img):
     print ("Loading image: " , img.shape)
     print("Depth : ", img.dtype.itemsize, img.strides)
     height, width,depth = img.shape
-    r_s, c_s, d_s = img.strides
     pixbuf = Pixbuf.new_from_data(img_rgb.tobytes(),
                                   GdkPixbuf.Colorspace.RGB,
                                   False,
                                   img.dtype.itemsize * 8,
                                   width,
                                   height,
-                                  r_s)
+                                  width * 3)
     return pixbuf
 
-def cv_resize(img):
+def cv_resize(img, ratio):
     w, h,d  = img.shape
-    ratio = 800/w
     width = int(w * ratio)
     height = int (h * ratio)
     dim = (height, width)
 
+    print ("ratio " , ratio)
     print ("resizing from " , img.shape, " => " , dim)
     resized = cv2.resize(img, None, fx=ratio, fy=ratio , interpolation = cv2.INTER_AREA)
     return resized
@@ -149,15 +148,28 @@ class MyWindow(Gtk.Window):
         width = int(abs (self.ending_x - self.starting_x))
         height = int(abs(self.ending_y - self.starting_y))
 
-        self.pixbuf_copy = Pixbuf.new_subpixbuf(self.pixbuf_copy,
-                                                        src_x, src_y,
-                                                        width, height)
+        end_x = src_x + width
+        end_y = src_y + height
+
+        # self.pixbuf_copy = Pixbuf.new_subpixbuf(self.pixbuf_copy,
+        #                                                 src_x, src_y,
+        #                                                 width, height)
 
         self.img = self.img[src_y:src_y+height,
                             src_x:src_x+width]
-        
-        
-        
+
+        orig_x = int(src_x / self.ratio)
+        orig_y = int(src_y / self.ratio)
+
+        orig_end_x = int(end_x / self.ratio)
+        orig_end_y = int(end_y / self.ratio)
+
+        self.img_src = self.img_src [orig_y:orig_end_y,
+                                      orig_x: orig_end_x]
+
+        self.pixbuf_copy = cv_to_pixbuf(self.img)        
+
+
         self.starting_x = 0
         self.starting_y = 0
         self.ending_x = 0
@@ -171,12 +183,10 @@ class MyWindow(Gtk.Window):
 
 
     def on_load(self, widget):
-        self.ratio = 5
-        # self.pixbuf_source = Pixbuf.new_from_file("IMG_1.JPG")
+        self.ratio = .20
         
         self.img_src = cv2.imread('IMG_1.JPG',1)
-        self.img_src = cv_resize(self.img_src)
-        self.img  = self.img_src.copy()
+        self.img = cv_resize(self.img_src, self.ratio)
         
         self.pixbuf_source = cv_to_pixbuf(self.img)
         # self.pixbuf_scaled = scale_pixbuf(self.pixbuf_source, self.ratio)
@@ -190,8 +200,8 @@ class MyWindow(Gtk.Window):
         self.content_panel.show_all()
 
     def on_copy(self, widget):
-        self.img  = self.img_src.copy()        
-        self.pixbuf_copy = self.pixbuf_source.copy()
+        self.img = cv_resize(self.img_src, self.ratio)
+        self.pixbuf_copy = cv_to_pixbuf(self.img)
         self.update_image()
 
 
@@ -211,33 +221,39 @@ class MyWindow(Gtk.Window):
         self.update_image()
 
     def on_save(self, widget):
-        if self.pixbuf_source is not None:
-            self.pixbuf_source.savev("output.jpg", "jpeg", [] , [] )
+        if self.pixbuf_copy is not None:
+            self.pixbuf_copy.savev("output.jpg", "jpeg", [] , [] )
+
+        if self.img_src is not None:
+            img = cv2.cvtColor(self.img_src, cv2.COLOR_BGR2GRAY)
+            cv2.imwrite("1.jpg", img)
+            img = (255 - img)
+            cv2.imwrite("2.jpg", img)
 
 
     def on_cv(self, widget):
-        rgb_planes = cv2.split(self.img)
-
-        result_planes = []
-        result_norm_planes = []
-
-        for plane in rgb_planes:
-            dilated_img = cv2.dilate(plane, np.ones((7,7), np.uint8))
-            bg_img = cv2.medianBlur(dilated_img, 21)
-            diff_img = 255 - cv2.absdiff(plane, bg_img)
-            norm_img = cv2.normalize(diff_img,None, alpha=0, beta=255, norm_type=cv2.NORM_MINMAX, dtype=cv2.CV_8UC1)
-
-            result_planes.append(diff_img)
-            result_norm_planes.append(norm_img)
-
-        result = cv2.merge(result_planes)
-        result_norm = cv2.merge(result_norm_planes)
-
-        self.img = result_norm
+        self.img = normalize(self.img)
+        self.img_src = normalize(self.img_src)
         
         self.pixbuf_copy = cv_to_pixbuf(self.img)
         self.update_image()
 
+
+def normalize(img):
+    rgb_planes = cv2.split(img)
+
+    result_norm_planes = []
+
+    for plane in rgb_planes:
+        dilated_img = cv2.dilate(plane, np.ones((7,7), np.uint8))
+        bg_img = cv2.medianBlur(dilated_img, 21)
+        diff_img = 255 - cv2.absdiff(plane, bg_img)
+        norm_img = cv2.normalize(diff_img,None, alpha=0, beta=255, norm_type=cv2.NORM_MINMAX, dtype=cv2.CV_8UC1)
+
+        result_norm_planes.append(norm_img)
+
+    result_norm = cv2.merge(result_norm_planes)
+    return result_norm
         
         
 
