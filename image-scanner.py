@@ -1,4 +1,5 @@
 import gi
+import os 
 
 import cv2 as cv2
 import numpy as np
@@ -13,6 +14,13 @@ from gi.repository.GdkPixbuf import Pixbuf
 from gi.repository.GdkPixbuf import InterpType
 from gi.repository.GdkPixbuf import PixbufRotation
 from gi.repository import GLib
+
+
+def get_image_files():
+    files = list(filter(lambda f: f.upper().endswith("JPG"),  [f for f in os.listdir('.') if os.path.isfile(f)]))
+    files.sort()
+
+    return files
 
 
 def cv_to_pixbuf(img):
@@ -52,7 +60,10 @@ class MyWindow(Gtk.Window):
     def __init__(self):
         super().__init__(title="Hello World")
 
-
+        self.image_files = get_image_files()
+        self.l = len(self.image_files)
+        self.current_index = -1
+        self.current_image = None
 
         main_panel = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
         top_panel = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL)
@@ -183,9 +194,12 @@ class MyWindow(Gtk.Window):
 
 
     def on_load(self, widget):
+        self.current_index = (self.current_index + 1) % self.l
+        current_image = self.image_files[self.current_index]
         self.ratio = .20
         
-        self.img_src = cv2.imread('IMG_1.JPG',1)
+        self.img_src = cv2.imread(current_image,1)
+
         self.img = cv_resize(self.img_src, self.ratio)
         
         self.pixbuf_source = cv_to_pixbuf(self.img)
@@ -197,13 +211,18 @@ class MyWindow(Gtk.Window):
             self.frame_left.remove(self.frame_left.get_child())
         self.frame_left.add(image)
 
+        self.do_copy()
+
         self.content_panel.show_all()
 
-    def on_copy(self, widget):
+    def do_copy(self):
+        print ("Copying")
         self.img = cv_resize(self.img_src, self.ratio)
         self.pixbuf_copy = cv_to_pixbuf(self.img)
         self.update_image()
 
+    def on_copy(self, widget):
+        self.do_copy()
 
     def update_image(self):
         image = Gtk.Image.new_from_pixbuf(self.pixbuf_copy)
@@ -227,9 +246,6 @@ class MyWindow(Gtk.Window):
         if self.img_src is not None:
             img = cv2.cvtColor(self.img_src, cv2.COLOR_BGR2GRAY)
             cv2.imwrite("1.jpg", img)
-            img = (255 - img)
-            cv2.imwrite("2.jpg", img)
-
 
     def on_cv(self, widget):
         self.img = normalize(self.img)
