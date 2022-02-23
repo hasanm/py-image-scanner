@@ -1,5 +1,7 @@
 import gi
-import os 
+import os
+import shutil
+from pathlib import Path
 
 import cv2 as cv2
 import numpy as np
@@ -64,6 +66,14 @@ class MyWindow(Gtk.Window):
         self.l = len(self.image_files)
         self.current_index = -1
         self.current_image = None
+
+
+        self.tmp_dir = "./tmp_output"
+        self.current_format = "jpeg"
+        self.dirpath = Path(self.tmp_dir)
+        if self.dirpath.exists() and self.dirpath.is_dir():
+            shutil.rmtree(self.dirpath)
+        self.dirpath.mkdir()        
 
         main_panel = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
         top_panel = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL)
@@ -195,10 +205,10 @@ class MyWindow(Gtk.Window):
 
     def on_load(self, widget):
         self.current_index = (self.current_index + 1) % self.l
-        current_image = self.image_files[self.current_index]
+        self.current_image = self.image_files[self.current_index]
         self.ratio = .20
         
-        self.img_src = cv2.imread(current_image,1)
+        self.img_src = cv2.imread(self.current_image,1)
 
         self.img = cv_resize(self.img_src, self.ratio)
         
@@ -240,12 +250,13 @@ class MyWindow(Gtk.Window):
         self.update_image()
 
     def on_save(self, widget):
-        if self.pixbuf_copy is not None:
-            self.pixbuf_copy.savev("output.jpg", "jpeg", [] , [] )
+        # if self.pixbuf_copy is not None:
+        #     self.pixbuf_copy.savev(self.dirpath.joinpath(self.current_image), self.current_format, [] , [] )
 
         if self.img_src is not None:
-            img = cv2.cvtColor(self.img_src, cv2.COLOR_BGR2GRAY)
-            cv2.imwrite("1.jpg", img)
+            # img = cv2.cvtColor(self.img_src, cv2.COLOR_BGR2GRAY)
+            img = self.img_src
+            cv2.imwrite(str(self.dirpath.joinpath(self.current_image)), img)
 
     def on_cv(self, widget):
         self.img = normalize(self.img)
