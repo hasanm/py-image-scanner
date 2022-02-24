@@ -58,6 +58,17 @@ def scale_pixbuf(pixbuf_in, ratio):
     return pixbuf_scaled
 
 
+def adjust_gamma(image, gamma=1.0):
+        # build a lookup table mapping the pixel values [0, 255] to
+        # their adjusted gamma values
+        invGamma = 1.0 / gamma
+        table = np.array([((i / 255.0) ** invGamma) * 255
+                for i in np.arange(0, 256)]).astype("uint8")
+
+        # apply gamma correction using the lookup table
+        return cv2.LUT(image, table)
+
+
 class MyWindow(Gtk.Window):
     def __init__(self):
         super().__init__(title="Hello World")
@@ -101,7 +112,7 @@ class MyWindow(Gtk.Window):
 
         button = Gtk.Button(label="CV")
         button.connect("clicked", self.on_cv)
-        top_panel.pack_start(button, False, False, 0)        
+        top_panel.pack_start(button, False, False, 0)
 
         button = Gtk.Button(label="Save")
         button.connect("clicked", self.on_save)
@@ -254,14 +265,18 @@ class MyWindow(Gtk.Window):
         #     self.pixbuf_copy.savev(self.dirpath.joinpath(self.current_image), self.current_format, [] , [] )
 
         if self.img_src is not None:
-            # img = cv2.cvtColor(self.img_src, cv2.COLOR_BGR2GRAY)
-            img = self.img_src
+            img = cv2.cvtColor(self.img_src, cv2.COLOR_BGR2GRAY)
+            # img = self.img_src
+            # img = cv_resize(self.img_src, .50)
+            ## Gamma Correction
+            img = adjust_gamma(img, 0.2)
+
             cv2.imwrite(str(self.dirpath.joinpath(self.current_image)), img)
 
     def on_cv(self, widget):
         self.img = normalize(self.img)
         self.img_src = normalize(self.img_src)
-        
+
         self.pixbuf_copy = cv_to_pixbuf(self.img)
         self.update_image()
 
