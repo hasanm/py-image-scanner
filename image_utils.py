@@ -1,4 +1,7 @@
 import cv2 as cv2
+from gi.repository import Gdk
+from gi.repository import GdkPixbuf
+from gi.repository.GdkPixbuf import Pixbuf
 
 def cv_to_pixbuf(img):
     img_rgb =  cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
