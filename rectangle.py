@@ -34,6 +34,11 @@ class MyWindow(Gtk.Window):
         
         self.ratio = 1.0
 
+        self.width = 100
+
+        self.draw_width = 100
+        self.draw_height = 100
+
         root_panel = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
         top_panel = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL)
         self.content_panel = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL)
@@ -44,6 +49,35 @@ class MyWindow(Gtk.Window):
         button = Gtk.Button(label="Load")
         button.connect("clicked", self.on_load)
         top_panel.pack_start(button, False, False, 0)
+
+        button = Gtk.Button(label="Left")
+        button.connect("clicked", self.on_left)
+        top_panel.pack_start(button, False, False, 0)
+
+        button = Gtk.Button(label="Right")
+        button.connect("clicked", self.on_right)
+        top_panel.pack_start(button, False, False, 0)
+
+        button = Gtk.Button(label="Up")
+        button.connect("clicked", self.on_up)
+        top_panel.pack_start(button, False, False, 0)
+
+        button = Gtk.Button(label="Down")
+        button.connect("clicked", self.on_down)
+        top_panel.pack_start(button, False, False, 0)
+
+        button = Gtk.Button(label="Increase")
+        button.connect("clicked", self.on_increase)
+        top_panel.pack_start(button, False, False, 0)
+
+        button = Gtk.Button(label="Decrease")
+        button.connect("clicked", self.on_decrease)
+        top_panel.pack_start(button, False, False, 0)
+
+
+        self.scale_width = Gtk.Scale().new_with_range(Gtk.Orientation.HORIZONTAL, 0, 100, 5)
+        self.scale_width.set_property("width-request", 200)
+        top_panel.pack_start(self.scale_width, False, False, 0)
 
         self.frame = Gtk.Frame(label="Image")
         self.content_panel.add(self.frame)
@@ -64,8 +98,45 @@ class MyWindow(Gtk.Window):
         
         self.add(root_panel)
 
+    def on_left(self, widget):
+        self.x = self.x - 5
+        if self.x < 0 :
+            self.x = 0
+
+        self.drawing_area.queue_draw()
+
+    def on_right(self, widget):
+        self.x = self.x + 5
+        if self.x > self.draw_width + self.width:
+            self.x = self.x - 5
+        self.drawing_area.queue_draw()        
+
+    def on_up(self, widget):
+        self.y = self.y - 5
+        if self.y < 0:
+            self.y = 0
+        self.drawing_area.queue_draw()            
+
+    def on_down(self, widget):
+        self.y = self.y + 5
+        if self.y  > self.draw_height + self.width:
+            self.y = self.y - 5
+        self.drawing_area.queue_draw()
+
+    def on_increase(self, widget):
+        self.width = self.width + 5
+        self.drawing_area.queue_draw()        
+
+    def on_decrease(self, widget):
+        self.width = self.width - 5
+        if self.width < 0 :
+            self.width = 0
+        self.drawing_area.queue_draw()            
+
+
     def on_tracking(self, widget, event):
         return False
+
 
     def on_pressed(self, widget, event):
         self.tracking = not self.tracking
@@ -75,11 +146,32 @@ class MyWindow(Gtk.Window):
         self.drawing_area.queue_draw()        
 
     def on_draw(self, widget, context):
-        print("Drawing")
-        context.set_source_rgba(0.0, 0.7, 0.0, 0.2)
-        context.set_line_width(10)
-        context.rectangle( self.x, self.y, 100, 100)
-        context.fill()
+
+        rect = widget.get_allocation()
+
+        self.draw_height = rect.height
+        self.draw_width = rect.width        
+
+        context.new_path()
+
+        context.move_to(self.x, self.y)
+        context.rel_line_to(self.width, 0)
+        context.rel_line_to(0, self.width)
+        context.rel_line_to(-self.width, 0)
+        context.close_path()
+
+        context.new_sub_path()
+        context.move_to(0, 0)
+        context.rel_line_to(0, rect.height)
+        context.rel_line_to(rect.width, 0)
+        context.rel_line_to(0, -rect.height)
+        context.close_path()
+                
+        context.clip()
+
+        context.set_source_rgba(.2, 0.2, 0.0, 0.2);
+        context.paint()        
+
         return False
 
     def update_image(self):
