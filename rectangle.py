@@ -21,6 +21,15 @@ from image_utils import cv_resize
 from image_utils import cv_to_pixbuf
 
 class MyWindow(Gtk.Window):
+
+    up_key = Gdk.KEY_i
+    down_key = Gdk.KEY_k
+    left_key = Gdk.KEY_j
+    right_key = Gdk.KEY_l
+
+    increase_key = Gdk.KEY_u
+    decrease_key = Gdk.KEY_o
+    
     def __init__(self):
         super().__init__(title="Hello World")
         self.current_image = None
@@ -50,35 +59,6 @@ class MyWindow(Gtk.Window):
         button.connect("clicked", self.on_load)
         top_panel.pack_start(button, False, False, 0)
 
-        button = Gtk.Button(label="Left")
-        button.connect("clicked", self.on_left)
-        top_panel.pack_start(button, False, False, 0)
-
-        button = Gtk.Button(label="Right")
-        button.connect("clicked", self.on_right)
-        top_panel.pack_start(button, False, False, 0)
-
-        button = Gtk.Button(label="Up")
-        button.connect("clicked", self.on_up)
-        top_panel.pack_start(button, False, False, 0)
-
-        button = Gtk.Button(label="Down")
-        button.connect("clicked", self.on_down)
-        top_panel.pack_start(button, False, False, 0)
-
-        button = Gtk.Button(label="Increase")
-        button.connect("clicked", self.on_increase)
-        top_panel.pack_start(button, False, False, 0)
-
-        button = Gtk.Button(label="Decrease")
-        button.connect("clicked", self.on_decrease)
-        top_panel.pack_start(button, False, False, 0)
-
-
-        self.scale_width = Gtk.Scale().new_with_range(Gtk.Orientation.HORIZONTAL, 0, 100, 5)
-        self.scale_width.set_property("width-request", 200)
-        top_panel.pack_start(self.scale_width, False, False, 0)
-
         self.frame = Gtk.Frame(label="Image")
         self.content_panel.add(self.frame)
         self.overlay = Gtk.Overlay()        
@@ -95,39 +75,71 @@ class MyWindow(Gtk.Window):
 
         self.event_box.connect("motion-notify-event", self.on_tracking)
         self.event_box.connect("button-press-event", self.on_pressed)
-        
+
+
+        self.connect("key-press-event",self.on_key_press_event)        
+
         self.add(root_panel)
 
-    def on_left(self, widget):
+
+    def on_key_press_event(self, widget, event):
+        print("Key press on widget: ", widget)
+        print("          Modifiers: ", event.state)
+        print("      Key val, name: ", event.keyval, Gdk.keyval_name(event.keyval))
+
+
+        if event.keyval == self.up_key:
+            self.go_up()
+            return True
+        elif event.keyval == self.left_key:
+            self.go_left()
+            return True
+        elif event.keyval == self.right_key:
+            self.go_right()
+            return True
+        elif event.keyval == self.down_key:
+            self.go_down()
+            return True
+        elif event.keyval == self.increase_key:
+            self.go_increase()
+            return True
+        elif event.keyval == self.decrease_key:
+            self.go_decrease()
+            return True
+
+        return False
+
+
+    def go_left(self):
         self.x = self.x - 5
         if self.x < 0 :
             self.x = 0
 
         self.drawing_area.queue_draw()
 
-    def on_right(self, widget):
+    def go_right(self):
         self.x = self.x + 5
         if self.x > self.draw_width + self.width:
             self.x = self.x - 5
         self.drawing_area.queue_draw()        
 
-    def on_up(self, widget):
+    def go_up(self):
         self.y = self.y - 5
         if self.y < 0:
             self.y = 0
         self.drawing_area.queue_draw()            
 
-    def on_down(self, widget):
+    def go_down(self):
         self.y = self.y + 5
         if self.y  > self.draw_height + self.width:
             self.y = self.y - 5
         self.drawing_area.queue_draw()
 
-    def on_increase(self, widget):
+    def go_increase(self):
         self.width = self.width + 5
         self.drawing_area.queue_draw()        
 
-    def on_decrease(self, widget):
+    def go_decrease(self):
         self.width = self.width - 5
         if self.width < 0 :
             self.width = 0
