@@ -36,6 +36,7 @@ class MyWindow(Gtk.Window):
         self.img_src = None
         self.img = None
         self.pixbuf = None
+        self.pixbuf_copy = None
         self.image = None
         self.tracking = False
         self.x = 0
@@ -77,8 +78,12 @@ class MyWindow(Gtk.Window):
         self.event_box.connect("button-press-event", self.on_pressed)
 
 
-        self.connect("key-press-event",self.on_key_press_event)        
+        self.connect("key-press-event",self.on_key_press_event)
 
+        self.frame_right = Gtk.Frame(label="Result")
+        self.content_panel.add(self.frame_right)
+        
+        
         self.add(root_panel)
 
 
@@ -90,21 +95,27 @@ class MyWindow(Gtk.Window):
 
         if event.keyval == self.up_key:
             self.go_up()
+            self.do_cut()
             return True
         elif event.keyval == self.left_key:
             self.go_left()
+            self.do_cut()
             return True
         elif event.keyval == self.right_key:
             self.go_right()
+            self.do_cut()
             return True
         elif event.keyval == self.down_key:
             self.go_down()
+            self.do_cut()
             return True
         elif event.keyval == self.increase_key:
             self.go_increase()
+            self.do_cut()
             return True
         elif event.keyval == self.decrease_key:
             self.go_decrease()
+            self.do_cut()
             return True
 
         return False
@@ -195,6 +206,13 @@ class MyWindow(Gtk.Window):
 
         self.drawing_area.queue_draw()
         self.content_panel.show_all()
+
+    def update_right_image(self):
+        tmp_image = Gtk.Image.new_from_pixbuf(self.pixbuf_copy)
+        if self.frame_right.get_child() is not None:
+            self.frame_right.remove(self.frame_right.get_child())
+        self.frame_right.add(tmp_image)
+        self.content_panel.show_all()
         
 
     def on_load(self, widget):
@@ -207,6 +225,21 @@ class MyWindow(Gtk.Window):
 
         self.update_image()
 
+    def do_cut(self):
+        src_x = int(self.x)
+        src_y = int(self.y)
+
+        orig_x = int(src_x/ self.ratio)
+        orig_y = int(src_y/ self.ratio)
+
+        orig_width = int(self.width / self.ratio)
+        
+        self.img_copy = self.img_src.copy()
+        self.img_copy = self.img_copy[orig_y:orig_y+orig_width,
+                                      orig_x:orig_x+orig_width]
+
+        self.pixbuf_copy = cv_to_pixbuf(self.img_copy)
+        self.update_right_image()
         
 
 
