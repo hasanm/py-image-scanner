@@ -51,6 +51,18 @@ def cv_resize(img, ratio):
     return resized
 
 
+def cv_resize_mono(img, ratio):
+    w, h  = img.shape
+    width = int(w * ratio)
+    height = int (h * ratio)
+    dim = (height, width)
+
+    print ("ratio " , ratio)
+    print ("resizing from " , img.shape, " => " , dim)
+    resized = cv2.resize(img, None, fx=ratio, fy=ratio , interpolation = cv2.INTER_AREA)
+    return resized
+
+
 def scale_pixbuf(pixbuf_in, ratio): 
     pixbuf_scaled = pixbuf_in.scale_simple(pixbuf_in.get_width()/ratio, 
                                            pixbuf_in.get_height()/ratio,
@@ -116,7 +128,7 @@ class MyWindow(Gtk.Window):
 
         button = Gtk.Button(label="Save")
         button.connect("clicked", self.on_save)
-        top_panel.pack_start(button, False, False, 0)        
+        top_panel.pack_start(button, False, False, 0)
 
         self.frame_left = Gtk.Frame(label="Left")
         self.content_panel.pack_start(self.frame_left, False, False, 0)
@@ -149,7 +161,7 @@ class MyWindow(Gtk.Window):
         self.add(main_panel)
 
     def on_pressed(self, widget, event):
-        self.tracking = not self.tracking        
+        self.tracking = not self.tracking
         if self.tracking:
             self.starting_x = event.x
             self.starting_y = event.y
@@ -270,6 +282,7 @@ class MyWindow(Gtk.Window):
             # img = cv_resize(self.img_src, .50)
             ## Gamma Correction
             img = adjust_gamma(img, 0.2)
+            # img = cv_resize_mono(img, .20)
 
             cv2.imwrite(str(self.dirpath.joinpath(self.current_image)), img)
 
